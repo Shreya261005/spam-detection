@@ -1,0 +1,53 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Load the data
+df = pd.read_csv('spam.csv', encoding='latin-1')
+df = df[['v1', 'v2']]  # Select relevant columns: label (v1) and text (v2)
+df.columns = ['label', 'text']
+df['label'] = df['label'].map({'ham': 0, 'spam': 1})  # Convert to binary: 0=ham, 1=spam
+
+# Split data
+X = df['text']
+y = df['label']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+# Vectorize text
+vectorizer = TfidfVectorizer(max_features=5000, stop_words='english')
+X_train_vec = vectorizer.fit_transform(X_train)
+X_test_vec = vectorizer.transform(X_test)
+
+# Train model
+model = LogisticRegression(random_state=42)
+model.fit(X_train_vec, y_train)
+
+# Predict and evaluate
+y_pred = model.predict(X_test_vec)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Accuracy: {accuracy:.4f}")
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred, target_names=['ham', 'spam']))
+
+# Confusion Matrix
+cm = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(6,4))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['ham', 'spam'], yticklabels=['ham', 'spam'])
+plt.title('Confusion Matrix')
+plt.ylabel('True')
+plt.xlabel('Predicted')
+plt.savefig('confusion_matrix.png')  # Saves chart as PNG
+plt.show()
+
+# Example predictions on new text
+new_texts = ["Free entry to win $1000!", "Hey, want to meet up later?"]
+new_vec = vectorizer.transform(new_texts)
+preds = model.predict(new_vec)
+print("\nExample Predictions:")
+for text, pred in zip(new_texts, preds):
+    print(f"'{text}' -> {'Spam' if pred == 1 else 'Ham'}")
